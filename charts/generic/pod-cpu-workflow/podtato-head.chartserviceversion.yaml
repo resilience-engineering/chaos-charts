@@ -1,0 +1,35 @@
+apiVersion: litmuchaos.io/v1alpha1
+kind: ChartServiceVersion
+metadata:
+  createdAt: 2021-05-24T10:28:08Z
+  name: pod-cpu-workflow
+  version: 0.1.0
+  annotations:
+    categories: pod-cpu-workflow
+    chartDescription: Injects chaos on pod-cpu-workflow application
+spec:
+  displayName: pod-cpu-workflow Chaos
+  categoryDescription: >
+    inject chaos on pod-cpu-workflow, uninstall and revert the chaos
+  experiments:
+    - pod-cpu-workflow
+  keywords:
+    - Kubernetes
+    - pod-cpu-workflow
+    - Pod
+  platforms:
+    - Minikube 
+  maintainers:
+    - name: oumkale
+      email: oumkale@chaosnative.com
+  provider:
+    name: ChaosNative
+  links:
+    - name: Kubernetes Slack
+      url: https://slack.kubernetes.io/
+    - name: Documentation
+      url: https://docs.litmuschaos.io/docs/chaoshub/#generic-chaos
+  icon:
+    - url:
+      mediatype: ""
+      
