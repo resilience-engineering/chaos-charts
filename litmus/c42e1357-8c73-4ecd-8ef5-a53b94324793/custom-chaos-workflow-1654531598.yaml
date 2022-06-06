@@ -1,0 +1,163 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  creationTimestamp: null
+  labels:
+    cluster_id: 809c08aa-6560-4970-9af4-e6797e8dbceb
+    subject: custom-chaos-workflow_test-docker-registry
+    workflow_id: 7c40135f-521d-42ae-b898-bd6beafe51c8
+    workflows.argoproj.io/controller-instanceid: 809c08aa-6560-4970-9af4-e6797e8dbceb
+  name: custom-chaos-workflow-1654531598
+  namespace: test-docker-registry
+spec:
+  arguments:
+    parameters:
+    - name: adminModeNamespace
+      value: test-docker-registry
+  entrypoint: custom-chaos
+  podGC:
+    strategy: OnWorkflowCompletion
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  serviceAccountName: argo-chaos
+  templates:
+  - inputs: {}
+    metadata: {}
+    name: custom-chaos
+    outputs: {}
+    steps:
+    - - arguments: {}
+        name: install-chaos-experiments
+        template: install-chaos-experiments
+    - - arguments: {}
+        name: sample-exec-chaos-w6x
+        template: sample-exec-chaos-w6x
+  - container:
+      args:
+      - kubectl apply -f /tmp/sample-exec-chaos-w6x.yaml -n {{workflow.parameters.adminModeNamespace}}
+        |  sleep 30
+      command:
+      - sh
+      - -c
+      image: litmuschaos/k8s:2.7.0
+      name: ""
+      resources: {}
+    inputs:
+      artifacts:
+      - name: sample-exec-chaos-w6x
+        path: /tmp/sample-exec-chaos-w6x.yaml
+        raw:
+          data: |
+            apiVersion: litmuschaos.io/v1alpha1
+            description:
+              message: >
+                it execs inside target pods to run the chaos inject commands, waits for the
+                chaos duration and reverts the chaos
+            kind: ChaosExperiment
+            metadata:
+              name: sample-exec-chaos
+              labels:
+                name: sample-exec-chaos
+                app.kubernetes.io/part-of: litmus
+                app.kubernetes.io/component: chaosexperiment
+                app.kubernetes.io/version: latest
+            spec:
+              definition:
+                scope: Namespaced
+                permissions:
+                  - apiGroups:
+                      - ""
+                      - batch
+                      - apps
+                      - litmuschaos.io
+                    resources:
+                      - jobs
+                      - pods
+                      - pods/log
+                      - events
+                      - deployments
+                      - replicasets
+                      - pods/exec
+                      - chaosengines
+                      - chaosexperiments
+                      - chaosresults
+                    verbs:
+                      - create
+                      - list
+                      - get
+                      - patch
+                      - update
+                      - delete
+                      - deletecollection
+                image: annamohan/py-runner:ci
+                imagePullPolicy: Always
+                args:
+                  - -c
+                  - python3 -u experiment -n chaos
+                command:
+                  - /bin/bash
+                env:
+                  - name: TOTAL_CHAOS_DURATION
+                    value: ""
+                  - name: CHAOS_INTERVAL
+                    value: ""
+                  - name: LIB
+                    value: ""
+                  - name: RAMP_TIME
+                    value: ""
+                labels:
+                  name: sample-exec-chaos
+                  app.kubernetes.io/part-of: litmus
+                  app.kubernetes.io/component: experiment-job
+                  app.kubernetes.io/version: latest
+    metadata: {}
+    name: install-chaos-experiments
+    outputs: {}
+  - container:
+      args:
+      - -file=/tmp/chaosengine-sample-exec-chaos-w6x.yaml
+      - -saveName=/tmp/engine-name
+      image: litmuschaos/litmus-checker:2.7.0
+      name: ""
+      resources: {}
+    inputs:
+      artifacts:
+      - name: sample-exec-chaos-w6x
+        path: /tmp/chaosengine-sample-exec-chaos-w6x.yaml
+        raw:
+          data: |
+            apiVersion: litmuschaos.io/v1alpha1
+            kind: ChaosEngine
+            metadata:
+              generateName: sample-exec-chaos-w6x
+              namespace: "{{workflow.parameters.adminModeNamespace}}"
+              labels:
+                instance_id: 227722d8-2aea-4514-866d-dde174d0b280
+                workflow_name: custom-chaos-workflow-1654531598
+            spec:
+              appinfo:
+                appns: default
+                applabel: app=nginx
+                appkind: deployment
+              engineState: active
+              auxiliaryAppInfo: ""
+              chaosServiceAccount: litmus-admin
+              jobCleanUpPolicy: retain
+              experiments:
+                - name: sample-exec-chaos
+                  spec:
+                    components:
+                      env:
+                        - name: TOTAL_CHAOS_DURATION
+                          value: "30"
+                        - name: CHAOS_INTERVAL
+                          value: "10"
+    metadata:
+      labels:
+        weight: "10"
+    name: sample-exec-chaos-w6x
+    outputs: {}
+status:
+  finishedAt: null
+  startedAt: null
